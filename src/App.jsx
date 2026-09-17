@@ -7,6 +7,9 @@ import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import Listings from './pages/Listings';
 import Agents from './pages/Agents';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
+import Notifications from './pages/Notifications';
 
 function AppShell({ children }) {
   const { user } = useAuth();
@@ -29,6 +32,9 @@ function AppRoutes() {
         <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
         <Route path="/listings" element={<ProtectedRoute><Listings /></ProtectedRoute>} />
         <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       </Routes>
     </AppShell>
   );
