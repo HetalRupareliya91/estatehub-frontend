@@ -1,11 +1,15 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const links = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/leads', label: 'Leads' },
   { to: '/listings', label: 'Listings' },
   { to: '/agents', label: 'Agents' },
+  { to: '/reports', label: 'Reports' },
+  { to: '/notifications', label: 'Notifications' },
+  { to: '/settings', label: 'Settings' },
 ];
 
 export default function Sidebar() {
@@ -29,6 +33,7 @@ export default function Sidebar() {
       <div className="sidebar-footer">
         <div>{user?.name}</div>
         <div style={{ opacity: 0.7 }}>{user?.role}</div>
+        <NotificationBell />
         <button className="sidebar-logout" onClick={logout}>Log out</button>
       </div>
     </aside>
