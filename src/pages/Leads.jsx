@@ -4,6 +4,7 @@ import api from '../api/axios';
 const STAGES = ['new', 'contacted', 'qualified', 'negotiation', 'won', 'lost'];
 const SOURCES = ['website', 'referral', 'walk_in', 'phone', 'social_media', 'other'];
 const INTERESTS = ['buy', 'sell', 'rent'];
+const PAGE_SIZES = [10, 25, 50];
 
 const emptyForm = { name: '', email: '', phone: '', source: 'website', interestType: 'buy', budget: '', notes: '' };
 
@@ -17,20 +18,38 @@ export default function Leads() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  async function loadLeads() {
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  async function loadLeads(targetPage = page) {
     setLoading(true);
     try {
-      const params = {};
+      const params = { page: targetPage, limit };
       if (stageFilter) params.stage = stageFilter;
       if (search) params.search = search;
       const { data } = await api.get('/leads', { params });
-      setLeads(data);
+      setLeads(data.data);
+      setPage(data.meta.page);
+      setTotal(data.meta.total);
+      setTotalPages(data.meta.totalPages);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { loadLeads(); }, [stageFilter]);
+  // stage or page-size changes always restart from page 1
+  useEffect(() => { loadLeads(1); }, [stageFilter, limit]);
+
+  function handleFilterClick() {
+    loadLeads(1);
+  }
+
+  function goToPage(target) {
+    if (target < 1 || target > totalPages || target === page) return;
+    loadLeads(target);
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -72,7 +91,9 @@ export default function Leads() {
   async function handleDelete(id) {
     if (!confirm('Remove this lead?')) return;
     await api.delete(`/leads/${id}`);
-    loadLeads();
+    // if that was the last row on a page beyond the first, step back a page
+    const nextPage = leads.length === 1 && page > 1 ? page - 1 : page;
+    loadLeads(nextPage);
   }
 
   return (
@@ -90,13 +111,13 @@ export default function Leads() {
           placeholder="Search by name, email, phone..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && loadLeads()}
+          onKeyDown={(e) => e.key === 'Enter' && handleFilterClick()}
         />
         <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}>
           <option value="">All stages</option>
           {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <button className="btn btn-secondary" onClick={loadLeads}>Filter</button>
+        <button className="btn btn-secondary" onClick={handleFilterClick}>Filter</button>
       </div>
 
       <div className="table-wrap">
@@ -146,6 +167,22 @@ export default function Leads() {
         )}
       </div>
 
+      {!loading && leads.length > 0 && (
+        <div className="pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+          <span className="page-subtitle">
+            Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
+              {PAGE_SIZES.map((s) => <option key={s} value={s}>{s} / page</option>)}
+            </select>
+            <button className="btn btn-secondary" onClick={() => goToPage(page - 1)} disabled={page <= 1}>Prev</button>
+            <span>Page {page} of {totalPages}</span>
+            <button className="btn btn-secondary" onClick={() => goToPage(page + 1)} disabled={page >= totalPages}>Next</button>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div className="modal-backdrop" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -194,4 +231,3 @@ export default function Leads() {
     </>
   );
 }
-
