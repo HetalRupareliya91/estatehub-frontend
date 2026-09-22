@@ -3,6 +3,7 @@ import api from '../api/axios';
 
 const TYPES = ['house', 'apartment', 'condo', 'land', 'commercial'];
 const STATUSES = ['available', 'under_offer', 'sold', 'rented', 'off_market'];
+const PAGE_SIZES = [10, 25, 50];
 
 const emptyForm = {
   title: '', description: '', propertyType: 'house', status: 'available', price: '',
@@ -19,20 +20,38 @@ export default function Listings() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  async function loadListings() {
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  async function loadListings(targetPage = page) {
     setLoading(true);
     try {
-      const params = {};
+      const params = { page: targetPage, limit };
       if (statusFilter) params.status = statusFilter;
       if (search) params.search = search;
       const { data } = await api.get('/listings', { params });
-      setListings(data);
+      setListings(data.data);
+      setPage(data.meta.page);
+      setTotal(data.meta.total);
+      setTotalPages(data.meta.totalPages);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { loadListings(); }, [statusFilter]);
+  // status or page-size changes always restart from page 1
+  useEffect(() => { loadListings(1); }, [statusFilter, limit]);
+
+  function handleFilterClick() {
+    loadListings(1);
+  }
+
+  function goToPage(target) {
+    if (target < 1 || target > totalPages || target === page) return;
+    loadListings(target);
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -71,7 +90,9 @@ export default function Listings() {
   async function handleDelete(id) {
     if (!confirm('Remove this listing?')) return;
     await api.delete(`/listings/${id}`);
-    loadListings();
+    // if that was the last row on a page beyond the first, step back a page
+    const nextPage = listings.length === 1 && page > 1 ? page - 1 : page;
+    loadListings(nextPage);
   }
 
   return (
@@ -89,13 +110,13 @@ export default function Listings() {
           placeholder="Search by title or address..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && loadListings()}
+          onKeyDown={(e) => e.key === 'Enter' && handleFilterClick()}
         />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <button className="btn btn-secondary" onClick={loadListings}>Filter</button>
+        <button className="btn btn-secondary" onClick={handleFilterClick}>Filter</button>
       </div>
 
       <div className="table-wrap">
@@ -135,6 +156,22 @@ export default function Listings() {
           </table>
         )}
       </div>
+
+      {!loading && listings.length > 0 && (
+        <div className="pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+          <span className="page-subtitle">
+            Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
+              {PAGE_SIZES.map((s) => <option key={s} value={s}>{s} / page</option>)}
+            </select>
+            <button className="btn btn-secondary" onClick={() => goToPage(page - 1)} disabled={page <= 1}>Prev</button>
+            <span>Page {page} of {totalPages}</span>
+            <button className="btn btn-secondary" onClick={() => goToPage(page + 1)} disabled={page >= totalPages}>Next</button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-backdrop" onClick={() => setShowModal(false)}>
@@ -204,4 +241,3 @@ export default function Listings() {
     </>
   );
 }
-
