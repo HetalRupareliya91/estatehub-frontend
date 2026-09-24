@@ -6,7 +6,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Pure function, no component state, so it's easy to reason about and test
 // on its own: given the current field values, what errors (if any) apply?
-function validate({ email, password }) {
+export function validate({ email, password }) {
   const errors = {};
   if (!email.trim()) {
     errors.email = 'Email is required';
