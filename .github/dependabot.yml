@@ -5,3 +5,15 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+    ignore:
+      # Major version bumps (React 19, Router 7, Vite 8, etc.) are breaking
+      # changes that need a deliberate, tested migration - not an
+      # auto-generated PR. Patch and minor updates still come through
+      # automatically since those are expected to be safe.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
